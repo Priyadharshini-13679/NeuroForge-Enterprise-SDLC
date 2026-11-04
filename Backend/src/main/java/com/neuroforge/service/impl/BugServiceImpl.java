@@ -102,7 +102,10 @@ public class BugServiceImpl implements BugService {
         BugStatus newStatus = request.getStatus() != null ? request.getStatus() : oldStatus;
 
         // Role-based status transition restrictions
-        if (user.getRole().isDeveloper()) {
+        if (user.getRole() != null && user.getRole().isDeveloper()) {
+            if (bug.getAssignee() == null || !bug.getAssignee().getId().equals(user.getId())) {
+                throw new AccessDeniedException("Developers can only update bugs assigned to them.");
+            }
             if (newStatus == BugStatus.CLOSED) {
                 throw new AccessDeniedException("Developers cannot close bugs. Please mark the bug as READY_FOR_QA for QA retesting.");
             }
@@ -190,7 +193,12 @@ public class BugServiceImpl implements BugService {
             throw new AccessDeniedException("User does not have access to this project.");
         }
         
-        List<Bug> bugs = bugRepository.findByProjectId(projectId);
+        List<Bug> bugs;
+        if (user.getRole() != null && user.getRole().isDeveloper()) {
+            bugs = bugRepository.findByProjectIdAndAssigneeId(projectId, user.getId());
+        } else {
+            bugs = bugRepository.findByProjectId(projectId);
+        }
         return bugs.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 

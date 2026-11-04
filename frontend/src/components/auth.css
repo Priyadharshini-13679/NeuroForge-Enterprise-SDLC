@@ -39,7 +39,7 @@
 .nf-ambient-glow {
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     radial-gradient(rgba(108, 99, 255, 0.12) 1px, transparent 1px),
     radial-gradient(rgba(255, 107, 53, 0.08) 1px, transparent 1px);
   background-size: 32px 32px, 48px 48px;
@@ -75,13 +75,23 @@
 }
 
 @keyframes nf-orb-float-1 {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(35px, 50px) scale(1.12); }
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate(35px, 50px) scale(1.12);
+  }
 }
 
 @keyframes nf-orb-float-2 {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(-30px, -45px) scale(1.1); }
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate(-30px, -45px) scale(1.1);
+  }
 }
 
 .nf-seam {
@@ -90,25 +100,32 @@
   right: 0;
   width: 3px;
   height: 100%;
-  background: linear-gradient(
-    180deg,
-    var(--nf-ember) 0%,
-    var(--nf-indigo) 45%,
-    var(--nf-ember) 75%,
-    var(--nf-indigo) 100%
-  );
+  background: linear-gradient(180deg,
+      var(--nf-ember) 0%,
+      var(--nf-indigo) 45%,
+      var(--nf-ember) 75%,
+      var(--nf-indigo) 100%);
   background-size: 100% 220%;
   box-shadow: 0 0 24px 2px rgba(255, 107, 53, 0.35);
   animation: nf-seam-flow 9s ease-in-out infinite;
 }
 
 @keyframes nf-seam-flow {
-  0% { background-position: 0% 0%; }
-  50% { background-position: 0% 100%; }
-  100% { background-position: 0% 0%; }
+  0% {
+    background-position: 0% 0%;
+  }
+
+  50% {
+    background-position: 0% 100%;
+  }
+
+  100% {
+    background-position: 0% 0%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .nf-seam,
   .nf-ambient-orb-1,
   .nf-ambient-orb-2,
@@ -164,8 +181,15 @@
 }
 
 @keyframes nf-pulse-ring {
-  0% { transform: scale(0.6); opacity: 0.9; }
-  100% { transform: scale(2.2); opacity: 0; }
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 
 .nf-wordmark-dot {
@@ -208,8 +232,15 @@
 }
 
 @keyframes nf-radar-ping {
-  0% { transform: scale(0.8); opacity: 1; }
-  100% { transform: scale(2.4); opacity: 0; }
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
 }
 
 .nf-status-text {
@@ -265,6 +296,7 @@
     opacity: 0;
     transform: translateY(14px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -631,9 +663,17 @@
   }
 
   @keyframes nf-seam-flow {
-    0% { background-position: 0% 0%; }
-    50% { background-position: 100% 0%; }
-    100% { background-position: 0% 0%; }
+    0% {
+      background-position: 0% 0%;
+    }
+
+    50% {
+      background-position: 100% 0%;
+    }
+
+    100% {
+      background-position: 0% 0%;
+    }
   }
 
   .nf-form-panel {

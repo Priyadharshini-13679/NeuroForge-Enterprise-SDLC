@@ -86,13 +86,18 @@ public class UserService {
                         }
                     });
             if (org == null) {
+                org = organizationRepository.findByNameIgnoreCase(specificId).orElse(null);
+            }
+            if (org == null) {
                 throw new ResourceNotFoundException("Organization with specific ID '" + specificId + "' not found.");
             }
             user.setRequestedOrganization(org);
+            user.setOrgApproved(false);
         } else if (request.getOrgId() != null) {
             Organization org = organizationRepository.findById(request.getOrgId())
                     .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
             user.setRequestedOrganization(org);
+            user.setOrgApproved(false);
         }
 
         userRepository.save(user);

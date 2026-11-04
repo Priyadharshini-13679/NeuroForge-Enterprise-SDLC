@@ -308,21 +308,20 @@ export default function BugsPage() {
       return result
     }
 
-    // Developer Filtering
+    // Developer Filtering (frontend, backend, fullstack: only show assigned bugs)
     if (isDev) {
+      const myBugs = result.filter(b => isAssignedToUser(b))
       if (activeTab === 'READY_FOR_QA') {
-        return result.filter(b => isAssignedToUser(b) && b.status === 'READY_FOR_QA')
+        return myBugs.filter(b => b.status === 'READY_FOR_QA')
       }
       if (activeTab === 'CLOSED') {
-        return result.filter(b => isAssignedToUser(b) && b.status === 'CLOSED')
+        return myBugs.filter(b => b.status === 'CLOSED')
       }
-      if (activeTab === 'ALL_PROJECT_BUGS') {
-        return result
+      if (activeTab === 'ALL_MY_BUGS') {
+        return myBugs
       }
       // Active assigned bugs by default
-      const assignedBugs = result.filter(b => isAssignedToUser(b) && (b.status === 'OPEN' || b.status === 'IN_PROGRESS' || b.status === 'REOPENED'))
-      // If developer has no active assigned bugs, fallback to all project bugs
-      return assignedBugs.length > 0 ? assignedBugs : result
+      return myBugs.filter(b => b.status === 'OPEN' || b.status === 'IN_PROGRESS' || b.status === 'REOPENED')
     }
 
     // PM / Admin / Others
@@ -430,17 +429,17 @@ export default function BugsPage() {
               </button>
 
               <button
-                onClick={() => setActiveTab('ALL_PROJECT_BUGS')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${activeTab === 'ALL_PROJECT_BUGS' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-              >
-                All Project Bugs ({bugs.length})
-              </button>
-
-              <button
                 onClick={() => setActiveTab('CLOSED')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${activeTab === 'CLOSED' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
                 Closed History ({bugs.filter(b => isAssignedToUser(b) && b.status === 'CLOSED').length})
+              </button>
+
+              <button
+                onClick={() => setActiveTab('ALL_MY_BUGS')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${activeTab === 'ALL_MY_BUGS' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                All Assigned to Me ({bugs.filter(b => isAssignedToUser(b)).length})
               </button>
             </>
           )}
@@ -497,7 +496,7 @@ export default function BugsPage() {
             <ShieldAlert className="w-12 h-12 text-slate-300 mb-3" />
             <p className="text-sm font-semibold text-slate-700">No Bugs Found</p>
             <p className="text-xs text-slate-400 mt-1 max-w-sm">
-              {isQa ? 'Report bugs against affected tasks to route them automatically to assigned developers.' : 'No bugs matching the current filter.'}
+              {isQa ? 'Report bugs against affected tasks to route them automatically to assigned developers.' : isDev ? 'No bugs assigned to you matching the current filter.' : 'No bugs matching the current filter.'}
             </p>
           </div>
         ) : (
@@ -570,7 +569,7 @@ export default function BugsPage() {
                   )}
 
                   {/* DEVELOPER ACTIONS */}
-                  {isDev && (assignedToMe || activeTab === 'ALL_PROJECT_BUGS') && (
+                  {isDev && assignedToMe && (
                     <>
                       {(bug.status === 'OPEN' || bug.status === 'REOPENED') && (
                         <button

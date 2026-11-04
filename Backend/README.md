@@ -383,7 +383,7 @@ http://localhost:8082/swagger-ui/index.html
 
 **Model Used:**
 ```
-llama-3.1-8b-instant
+openai/gpt-oss-20b
 ```
 
 ---

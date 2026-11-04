@@ -192,7 +192,7 @@ export default function OrganizationsPage() {
   }
 
   async function handleRemoveOrgAdmin(orgId, userId) {
-    if (!confirm("Are you sure you want to remove this user as Org Admin?")) return
+    if (!confirm("Are you sure you want to remove this user as Org Admin? They will be unassigned and returned to the New Org Administrators list.")) return
     setError('')
     try {
       await orgApi.removeOrgAdmin(orgId, userId)

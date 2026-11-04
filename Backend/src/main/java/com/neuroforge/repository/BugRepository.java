@@ -9,6 +9,7 @@ import java.util.List;
 @Repository
 public interface BugRepository extends JpaRepository<Bug, Long> {
     List<Bug> findByProjectId(Long projectId);
+    List<Bug> findByProjectIdAndAssigneeId(Long projectId, Long assigneeId);
     List<Bug> findBySprintId(Long sprintId);
     List<Bug> findByTaskId(Long taskId);
     List<Bug> findByAssigneeId(Long assigneeId);

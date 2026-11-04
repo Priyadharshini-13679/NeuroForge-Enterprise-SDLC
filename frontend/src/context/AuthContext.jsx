@@ -91,8 +91,8 @@ export function AuthProvider({ children }) {
   )
 
   const signup = useCallback(
-    async ({ fullName, email, phone, role, password, orgId }) => {
-      const res = await api.post('/auth/signup', { fullName, email, phone, role, password, orgId })
+    async (payload) => {
+      const res = await api.post('/auth/signup', payload)
       setToken(res.data.token)
       setUser(res.data.user)
       return res.data.user

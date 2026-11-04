@@ -236,11 +236,14 @@ public class OrgService {
             throw new InvalidRequestException("SUPER_ADMIN user cannot be assigned as Org Admin.");
         }
 
-        // If organization already has an ORG_ADMIN, demote previous Org Admin(s) to DEVELOPER to allow reassigning
+        // If organization already has an ORG_ADMIN, unlink previous Org Admin(s) and preserve ORG_ADMIN role so they return to unassigned pool
         List<User> existingOrgUsers = userRepository.findByOrganizationId(orgId);
         for (User u : existingOrgUsers) {
             if (u.getRole() == Role.ORG_ADMIN && !u.getId().equals(userId)) {
-                u.setRole(Role.DEVELOPER);
+                u.setOrganization(null);
+                u.getTeams().clear();
+                u.setOrgApproved(false);
+                u.setRole(Role.ORG_ADMIN);
                 userRepository.save(u);
             }
         }
@@ -276,10 +279,11 @@ public class OrgService {
             throw new InvalidRequestException("User is not an Org Admin.");
         }
 
-        // Demote role to DEVELOPER and unlink from organization
-        targetUser.setRole(Role.DEVELOPER);
+        // Unlink from organization while preserving the ORG_ADMIN role so user returns to unassigned Org Admins pool
+        targetUser.setRole(Role.ORG_ADMIN);
         targetUser.getTeams().clear();
         targetUser.setOrganization(null);
+        targetUser.setOrgApproved(false);
         userRepository.save(targetUser);
     }
 
@@ -719,6 +723,7 @@ public class OrgService {
         }
         user.setOrganization(user.getRequestedOrganization());
         user.setRequestedOrganization(null);
+        user.setOrgApproved(true);
         userRepository.save(user);
         assignUserToDefaultTeam(user, user.getOrganization());
     }

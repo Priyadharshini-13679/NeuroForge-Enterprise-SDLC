@@ -77,7 +77,7 @@ export default function SpecsListPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <Can roles={[ROLES.PROJECT_MANAGER, ROLES.ORG_ADMIN]}>
+          <Can roles={[ROLES.PROJECT_MANAGER]}>
             <Link to={`/projects/${projectId}/specs/new`} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm whitespace-nowrap">
               + New Spec
             </Link>

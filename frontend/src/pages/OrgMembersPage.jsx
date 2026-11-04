@@ -75,6 +75,8 @@ export default function OrgMembersPage() {
 
   const [updatingUserId, setUpdatingUserId] = useState(null)
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [joinRequests, setJoinRequests] = useState([])
+  const [activeTab, setActiveTab] = useState('members') // 'members' | 'requests'
 
   // Edit Role Modal state
   const [roleModalMember, setRoleModalMember] = useState(null)
@@ -94,8 +96,12 @@ export default function OrgMembersPage() {
     setError('')
     try {
       if (activeOrgId) {
-        const res = await orgApi.listMembers(activeOrgId)
+        const [res, reqRes] = await Promise.all([
+          orgApi.listMembers(activeOrgId),
+          isOrgAdmin ? orgApi.getJoinRequests(activeOrgId).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+        ])
         setMembers(Array.isArray(res.data) ? res.data : [])
+        setJoinRequests(Array.isArray(reqRes.data) ? reqRes.data : [])
       } else if (isSuperAdmin) {
         const res = await adminApi.getAllUsers()
         const rawUsers = Array.isArray(res.data) ? res.data : []
@@ -118,7 +124,28 @@ export default function OrgMembersPage() {
     } finally {
       setLoading(false)
     }
-  }, [activeOrgId, isSuperAdmin])
+  }, [activeOrgId, isSuperAdmin, isOrgAdmin])
+
+  const handleApproveJoinRequest = async (userId) => {
+    setActionError('')
+    try {
+      await orgApi.approveJoinRequest(activeOrgId, userId)
+      await loadMembers()
+    } catch (err) {
+      setActionError(extractErrorMessage(err))
+    }
+  }
+
+  const handleRejectJoinRequest = async (userId) => {
+    if (!confirm('Are you sure you want to reject this join request?')) return
+    setActionError('')
+    try {
+      await orgApi.rejectJoinRequest(activeOrgId, userId)
+      await loadMembers()
+    } catch (err) {
+      setActionError(extractErrorMessage(err))
+    }
+  }
 
   useEffect(() => {
     loadMembers()
@@ -336,91 +363,257 @@ export default function OrgMembersPage() {
         </div>
       </div>
 
-      {/* Members Table Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-              <IconUsers className="w-5 h-5 text-orange-500" />
-              Members List
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Showing active team members with assigned roles and teams in {user?.orgName || 'your organization'}.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            {/* Search Input */}
-            <input
-              type="text"
-              placeholder="Search by name, email, role..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 w-full sm:w-56"
-            />
-
-            {/* Role Filter */}
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-700 cursor-pointer"
-            >
-              <option value="ALL">All Roles</option>
-              <option value={ROLES.ORG_ADMIN}>Org Admin</option>
-              <option value={ROLES.PROJECT_MANAGER}>Project Manager</option>
-              <option value={ROLES.DEVELOPER}>Fullstack Developer</option>
-              <option value={ROLES.FRONTEND_DEVELOPER}>Frontend Developer</option>
-              <option value={ROLES.BACKEND_DEVELOPER}>Backend Developer</option>
-              <option value={ROLES.QA_TESTER}>QA / Tester</option>
-              <option value={ROLES.CLIENT}>Client / Stakeholder</option>
-            </select>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-700 cursor-pointer"
-            >
-              <option value="ALL">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-            </select>
-
-            <span className="text-xs font-semibold px-2.5 py-1 bg-orange-100 text-orange-700 rounded-full whitespace-nowrap">
-              {filteredMembers.length} Member{filteredMembers.length !== 1 ? 's' : ''}
+      {/* Pending Join Requests Banner for Org Admin */}
+      {isOrgAdmin && joinRequests.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <span className="flex h-3 w-3 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
             </span>
+            <div>
+              <p className="text-sm font-semibold text-amber-900">
+                {joinRequests.length} Pending Join Request{joinRequests.length > 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-amber-700">
+                New user{joinRequests.length > 1 ? 's have' : ' has'} signed up with your Org ID and {joinRequests.length > 1 ? 'are' : 'is'} waiting for approval.
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab(activeTab === 'requests' ? 'members' : 'requests')}
+            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors shrink-0 cursor-pointer"
+          >
+            {activeTab === 'requests' ? 'View All Members' : 'Review Requests (' + joinRequests.length + ')'}
+          </button>
         </div>
+      )}
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
-            <IconUsers className="w-10 h-10 text-slate-300 mb-3" />
-            <p className="text-sm font-medium text-slate-600">Loading members...</p>
-          </div>
-        ) : filteredMembers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
-            <IconUsers className="w-10 h-10 text-slate-300 mb-3" />
-            <p className="text-sm font-medium text-slate-600">
-              {searchQuery || roleFilter !== 'ALL' || statusFilter !== 'ALL'
-                ? 'No organization members match your search criteria'
-                : 'No members in this organization yet'}
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              Invite team members or approve pending join requests to grow your organization.
-            </p>
+      {/* Main Content Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        {/* Tab Switcher */}
+        {isOrgAdmin && (
+          <div className="flex items-center gap-2 border-b border-slate-200 mb-6 pb-3">
             <button
               type="button"
-              onClick={() => setInviteModalOpen(true)}
-              className="mt-4 px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+              onClick={() => setActiveTab('members')}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+                activeTab === 'members'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
             >
-              + Invite First Member
+              <IconUsers className="w-4 h-4" />
+              <span>Active Members</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                activeTab === 'members' ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {members.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('requests')}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+                activeTab === 'requests'
+                  ? 'bg-orange-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <IconClock className="w-4 h-4" />
+              <span>Pending Join Requests</span>
+              {joinRequests.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'requests' ? 'bg-white text-orange-600' : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {joinRequests.length}
+                </span>
+              )}
             </button>
           </div>
+        )}
+
+        {activeTab === 'requests' && isOrgAdmin ? (
+          <div>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <IconClock className="w-5 h-5 text-orange-500" />
+                Pending Join Requests
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Users who registered using your Organization Specific ID ({user?.orgSpecificId || 'ORG-' + user?.orgId}) and require approval before joining.
+              </p>
+            </div>
+
+            {loading ? (
+              <div className="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
+                <IconUsers className="w-10 h-10 text-slate-300 mb-3" />
+                <p className="text-sm font-medium text-slate-600">Loading join requests...</p>
+              </div>
+            ) : joinRequests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
+                <IconCheckCircle className="w-10 h-10 text-green-400 mb-3" />
+                <p className="text-sm font-medium text-slate-700">No pending join requests</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  All user requests to join your organization have been reviewed.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-700">
+                  <thead className="text-xs font-medium text-slate-500 uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="pb-3 px-2">Applicant</th>
+                      <th className="pb-3 px-2">Role Requested</th>
+                      <th className="pb-3 px-2">Contact</th>
+                      <th className="pb-3 px-2">Requested On</th>
+                      <th className="pb-3 px-2 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {joinRequests.map((req) => (
+                      <tr key={req.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-orange-50 border border-orange-200 text-orange-600 flex items-center justify-center font-bold text-xs shrink-0">
+                              {(req.fullName || req.email || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-slate-900">{req.fullName || 'User'}</div>
+                              <div className="text-xs text-slate-500">{req.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold border ${getRoleBadgeColor(req.role)}`}>
+                            {formatEnum(req.role)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-xs text-slate-600">
+                          {req.phoneNumber ? (
+                            <span className="flex items-center gap-1">
+                              <Phone size={12} className="text-slate-400" />
+                              {req.phoneNumber}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic">No phone</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-xs text-slate-500">
+                          {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleApproveJoinRequest(req.id)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                              <IconCheckCircle className="w-3.5 h-3.5" />
+                              <span>Approve</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRejectJoinRequest(req.id)}
+                              className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md transition-colors cursor-pointer"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-700">
-              <thead className="text-xs font-medium text-slate-500 uppercase border-b border-slate-200">
-                <tr>
+          <div>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <IconUsers className="w-5 h-5 text-orange-500" />
+                  Members List
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Showing active team members with assigned roles and teams in {user?.orgName || 'your organization'}.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                {/* Search Input */}
+                <input
+                  type="text"
+                  placeholder="Search by name, email, role..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 w-full sm:w-56"
+                />
+
+                {/* Role Filter */}
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-700 cursor-pointer"
+                >
+                  <option value="ALL">All Roles</option>
+                  <option value={ROLES.ORG_ADMIN}>Org Admin</option>
+                  <option value={ROLES.PROJECT_MANAGER}>Project Manager</option>
+                  <option value={ROLES.DEVELOPER}>Fullstack Developer</option>
+                  <option value={ROLES.FRONTEND_DEVELOPER}>Frontend Developer</option>
+                  <option value={ROLES.BACKEND_DEVELOPER}>Backend Developer</option>
+                  <option value={ROLES.QA_TESTER}>QA / Tester</option>
+                  <option value={ROLES.CLIENT}>Client / Stakeholder</option>
+                </select>
+
+                {/* Status Filter */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-slate-700 cursor-pointer"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+
+                <span className="text-xs font-semibold px-2.5 py-1 bg-orange-100 text-orange-700 rounded-full whitespace-nowrap">
+                  {filteredMembers.length} Member{filteredMembers.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
+                <IconUsers className="w-10 h-10 text-slate-300 mb-3" />
+                <p className="text-sm font-medium text-slate-600">Loading members...</p>
+              </div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
+                <IconUsers className="w-10 h-10 text-slate-300 mb-3" />
+                <p className="text-sm font-medium text-slate-600">
+                  {searchQuery || roleFilter !== 'ALL' || statusFilter !== 'ALL'
+                    ? 'No organization members match your search criteria'
+                    : 'No members in this organization yet'}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Invite team members or approve pending join requests to grow your organization.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setInviteModalOpen(true)}
+                  className="mt-4 px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+                >
+                  + Invite First Member
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-700">
+                  <thead className="text-xs font-medium text-slate-500 uppercase border-b border-slate-200">
+                    <tr>
                   <th className="pb-3 px-2">Member</th>
                   <th className="pb-3 px-2">Role</th>
                   <th className="pb-3 px-2">Teams</th>
@@ -590,6 +783,8 @@ export default function OrgMembersPage() {
           </div>
         )}
       </div>
+    )}
+  </div>
 
       {/* Edit Role Modal */}
       {roleModalMember && (

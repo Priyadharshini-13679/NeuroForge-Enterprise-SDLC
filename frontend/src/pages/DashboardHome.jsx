@@ -413,7 +413,7 @@ export default function DashboardHome() {
   async function handleRemoveOrgAdmin(orgId, userId) {
     if (
       !confirm(
-        "Are you sure you want to remove this user as Org Admin? Their role will revert to Developer.",
+        "Are you sure you want to remove this user as Org Admin? They will be unassigned and returned to the New Org Administrators list.",
       )
     )
       return;

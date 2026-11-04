@@ -88,7 +88,7 @@ export default function SpecList() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Can roles={[ROLES.PROJECT_MANAGER, ROLES.ORG_ADMIN]}>
+          <Can roles={[ROLES.PROJECT_MANAGER]}>
             <button
               className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm whitespace-nowrap"
               onClick={() => setIsGenerateModalOpen(true)}
@@ -145,7 +145,7 @@ export default function SpecList() {
             {statusFilter === 'ALL' ? 'No specs found' : `No ${statusFilter.toLowerCase().replace('_', ' ')} specs yet`}
           </p>
           {statusFilter === 'ALL' && (
-            <Can roles={[ROLES.PROJECT_MANAGER, ROLES.ORG_ADMIN]}>
+            <Can roles={[ROLES.PROJECT_MANAGER]}>
               <button
                 className="mt-4 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-lg transition-colors shadow-sm"
                 onClick={() => setIsGenerateModalOpen(true)}
